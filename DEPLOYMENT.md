@@ -1,11 +1,33 @@
 # AgentForge Deployment Guide (20-Minute Setup)
 
-Since the project uses a multi-container Docker setup (Next.js, FastAPI, PostgreSQL, Redis), you have two ultra-fast paths to deploy it in 20 minutes:
+Since the project uses a multi-container Docker setup (Next.js, FastAPI, PostgreSQL, Redis), you have three ultra-fast paths to deploy it in 20 minutes:
 
 ---
 
-## Option 1: Deploying to a VPS (DigitalOcean / Hetzner / AWS EC2) — Recommended
-*Best choice because you already have a complete `docker-compose.yml` that configures and links all databases and apps automatically.*
+## Option 1: Deploying on Render.com (Easiest Managed Cloud with Free Tier) — Recommended 🚀
+*We have pre-configured a `render.yaml` blueprint. This allows Render to automatically provision all 4 services (PostgreSQL, Redis, Backend, Frontend) and connect them in a single click.*
+
+### Step 1: Deploy with Blueprint
+1. Go to [Render.com](https://render.com) and log in.
+2. Click the **New** button (top right) and select **Blueprint**.
+3. Connect your GitHub repository: `kavin18022005/AgentForge-AI-Multi-Agent-Business-Automation-Platform`.
+4. Render will read the `render.yaml` file and show the list of resources it will create:
+   - `agentforge-db` (PostgreSQL Database)
+   - `agentforge-redis` (Redis Cache)
+   - `agentforge-backend` (FastAPI backend service)
+   - `agentforge-frontend` (Next.js frontend service)
+
+### Step 2: Configure Environment Variables
+1. Render will prompt you to configure the environment variables:
+   - **GEMINI_API_KEY**: Paste your Google Gemini API key.
+   - **OPENAI_API_KEY**: Paste your OpenAI API key (optional).
+2. Click **Apply**.
+3. Render will now build and launch all 4 services. Once completed, your frontend URL will be visible on the dashboard!
+
+---
+
+## Option 2: Deploying to a VPS (DigitalOcean / Hetzner / AWS EC2)
+*Best choice if you want to host it yourself and keep everything contained in Docker Compose.*
 
 ### Step 1: Create a VM (3 minutes)
 1. Sign up on **DigitalOcean**, **Hetzner**, or **Linode**.
@@ -70,7 +92,7 @@ docker compose up -d --build
 
 ---
 
-## Option 2: Deploying on Railway.app (Serverless PaaS)
+## Option 3: Deploying on Railway.app (Serverless PaaS)
 *Best choice if you do not want to manage a Linux server or handle SSH.*
 
 ### Step 1: Sign up & Connect GitHub (2 minutes)
