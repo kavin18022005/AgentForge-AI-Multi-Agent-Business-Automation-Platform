@@ -1,0 +1,49 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Databases
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Uploads and temporary assets
+uploads/
+scratch/
+*.pdf
+
+# Frontend dependencies and builds
+node_modules/
+.next/
+out/
+build/
+dist/
+.docusaurus/
+.cache/
+
+# IDE / System files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
