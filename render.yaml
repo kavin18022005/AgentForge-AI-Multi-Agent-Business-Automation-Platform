@@ -1,0 +1,48 @@
+services:
+  # 1. Redis Cache
+  - type: redis
+    name: agentforge-redis
+    plan: free
+    ipAllowList: [] # Internal network access only
+
+  # 2. FastAPI Backend
+  - type: web
+    name: agentforge-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agentforge-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: agentforge-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false # Render will prompt you for this value on deploy
+      - key: OPENAI_API_KEY
+        sync: false # Optional: Render will prompt you or you can leave blank
+
+  # 3. Next.js Frontend
+  - type: web
+    name: agentforge-frontend
+    env: docker
+    dockerfilePath: frontend/Dockerfile
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: ${agentforge-backend.url}/api
+
+databases:
+  # 4. PostgreSQL Database
+  - name: agentforge-db
+    plan: free
+    databaseName: agentforge_db
+    user: agentforge
