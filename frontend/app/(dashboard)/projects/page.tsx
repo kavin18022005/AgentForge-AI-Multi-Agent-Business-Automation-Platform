@@ -179,43 +179,21 @@ export default function ProjectsPage() {
   const handleDownloadReport = async (format: string) => {
     if (!selectedProject) return;
     try {
-      const res = await api.get(`/reports/${selectedProject.id}/download/${format}`, {
-        responseType: "blob",
-      });
+      const token = localStorage.getItem("token") || "";
+      const baseURL = api.defaults.baseURL || "http://localhost:8000/api";
+      const apiHost = baseURL.endsWith("/api") ? baseURL.slice(0, -4) : baseURL;
+      const url = `${apiHost}/api/reports/${selectedProject.id}/download/${format}?token=${token}`;
       
-      const blob = new Blob([res.data], { type: res.headers["content-type"] });
-      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      
-      // Determine file name from content-disposition header if present
-      let filename = `Report.${format}`;
-      const disposition = res.headers["content-disposition"];
-      if (disposition && disposition.includes("filename=")) {
-        const matches = disposition.match(/filename="?([^"]+)"?/);
-        if (matches && matches[1]) {
-          filename = matches[1];
-        }
-      } else {
-        const title = selectedProject.title ? selectedProject.title.replace(/\s+/g, "_") : "Report";
-        filename = `${title}_Intelligence_Report.${format}`;
-      }
-      
-      link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
       
-      // Delay removal and revocation to let the browser process the download with the correct filename
       setTimeout(() => {
         document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
       }, 200);
     } catch (err) {
       console.error("Failed to download report:", err);
-      // Fallback
-      const token = localStorage.getItem("token") || "";
-      const url = `http://localhost:8000/api/reports/${selectedProject.id}/download/${format}?token=${token}`;
-      window.open(url, "_blank");
     }
   };
 
@@ -272,8 +250,8 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="projects-grid">
-          {projects.map((p: any) => (
-            <div key={p.id} className="project-card glass hover-card" onClick={() => setSelectedProject(p)}>
+          {projects.map((p: any, idx: number) => (
+            <div key={p.id} className={`project-card glass hover-card animate-fade-in animate-stagger-${(idx % 5) + 1}`} onClick={() => setSelectedProject(p)}>
               <div className="project-header">
                 <h3>{p.title}</h3>
                 <span className={`status-badge ${p.status}`}>{p.status}</span>
@@ -281,7 +259,7 @@ export default function ProjectsPage() {
               <p className="project-goal">{p.goal}</p>
               <div className="project-footer">
                 <div className="progress-bar-container">
-                  <div className="progress-bar" style={{ width: `${p.progress}%` }}></div>
+                  <div className="progress-bar fluid-progress" style={{ width: `${p.progress}%` }}></div>
                 </div>
                 <span className="progress-text">{p.progress}%</span>
               </div>
@@ -407,7 +385,7 @@ export default function ProjectsPage() {
                     <span>{selectedProject.progress}% Complete</span>
                   </div>
                   <div className="console-progress-bar-container">
-                    <div className="console-progress-bar" style={{ width: `${selectedProject.progress}%` }}></div>
+                    <div className="console-progress-bar fluid-progress" style={{ width: `${selectedProject.progress}%` }}></div>
                   </div>
                 </div>
 
@@ -495,41 +473,65 @@ export default function ProjectsPage() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 2rem;
+          margin-bottom: 2.5rem;
         }
 
         .page-title {
-          font-size: 1.875rem;
-          font-weight: 700;
+          font-size: 2.25rem;
+          font-weight: 800;
+          background: linear-gradient(to right, #ffffff, #c084fc, #818cf8);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          letter-spacing: -0.02em;
         }
 
         .page-subtitle {
           color: #94a3b8;
+          font-size: 0.95rem;
+          margin-top: 0.25rem;
         }
 
         .create-btn {
-          gap: 0.5rem;
+          gap: 0.6rem;
           width: auto;
+          box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
         }
 
         .search-bar {
           position: relative;
-          margin-bottom: 2rem;
+          margin-bottom: 2.5rem;
         }
 
         .search-icon {
           position: absolute;
-          left: 1rem;
+          left: 1.25rem;
           top: 50%;
           transform: translateY(-50%);
-          color: #94a3b8;
+          color: #64748b;
+          transition: color 0.3s ease;
         }
 
         .search-input {
           width: 100%;
-          padding: 1rem 1rem 1rem 3rem;
-          border-radius: 12px;
+          padding: 0.9rem 1.25rem 0.9rem 3.25rem;
+          border-radius: 14px;
+          background: rgba(15, 23, 42, 0.4);
+          border: 1px solid var(--surface-border);
           color: var(--foreground);
+          font-size: 0.95rem;
+          backdrop-filter: blur(10px);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .search-input:focus {
+          outline: none;
+          border-color: rgba(99, 102, 241, 0.5);
+          background: rgba(15, 23, 42, 0.6);
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .search-bar:focus-within .search-icon {
+          color: var(--primary);
         }
 
         .loading-state, .empty-state {
@@ -537,13 +539,22 @@ export default function ProjectsPage() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 4rem 2rem;
+          padding: 6rem 2rem;
           text-align: center;
+          border: 1px solid var(--surface-border);
+          border-radius: 20px;
+          background: rgba(15, 23, 42, 0.25);
+        }
+
+        .empty-state h3 {
+          font-size: 1.25rem;
+          font-weight: 700;
+          margin-bottom: 0.5rem;
         }
 
         .empty-state p {
           color: #94a3b8;
-          margin-top: 0.5rem;
+          font-size: 0.9rem;
         }
 
         .spinner {
@@ -552,57 +563,120 @@ export default function ProjectsPage() {
 
         .projects-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-          gap: 1.5rem;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 2rem;
         }
 
         .project-card {
-          padding: 1.5rem;
+          padding: 1.75rem;
           display: flex;
           flex-direction: column;
           cursor: pointer;
+          position: relative;
+          background: rgba(15, 23, 42, 0.3);
+          border: 1px solid var(--surface-border);
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+          overflow: hidden;
         }
 
         .hover-card {
-          transition: all 0.25s ease;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .hover-card:hover {
-          transform: translateY(-2px);
-          border-color: var(--primary);
-          box-shadow: 0 12px 36px 0 rgba(99, 102, 241, 0.15);
+          transform: translateY(-5px);
+          border-color: rgba(99, 102, 241, 0.4);
+          box-shadow: 0 12px 30px -10px rgba(99, 102, 241, 0.3), 
+                      0 4px 24px rgba(0, 0, 0, 0.3);
+          background: rgba(15, 23, 42, 0.45);
         }
 
         .project-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 1rem;
+          margin-bottom: 1.25rem;
+          gap: 1rem;
         }
 
         .project-header h3 {
-          font-size: 1.125rem;
-          font-weight: 600;
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: #f8fafc;
+          letter-spacing: -0.01em;
           margin: 0;
+          line-height: 1.3;
         }
 
         .status-badge {
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           padding: 0.25rem 0.75rem;
           border-radius: 999px;
           text-transform: uppercase;
-          font-weight: 600;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
         }
 
-        .status-badge.pending { background: rgba(234, 179, 8, 0.2); color: #eab308; }
-        .status-badge.running { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
-        .status-badge.completed { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-        .status-badge.failed { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .status-badge::before {
+          content: '';
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          display: inline-block;
+        }
+
+        .status-badge.pending { 
+          background: rgba(234, 179, 8, 0.1); 
+          color: #fbbf24;
+          border: 1px solid rgba(234, 179, 8, 0.25);
+        }
+        .status-badge.pending::before {
+          background: #fbbf24;
+        }
+
+        .status-badge.running { 
+          background: rgba(56, 189, 248, 0.1); 
+          color: #38bdf8;
+          border: 1px solid rgba(56, 189, 248, 0.25);
+        }
+        .status-badge.running::before {
+          background: #38bdf8;
+          animation: badge-pulse 1.2s infinite;
+        }
+
+        .status-badge.completed { 
+          background: rgba(16, 185, 129, 0.1); 
+          color: #34d399;
+          border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+        .status-badge.completed::before {
+          background: #34d399;
+        }
+
+        .status-badge.failed { 
+          background: rgba(239, 68, 68, 0.1); 
+          color: #f87171;
+          border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+        .status-badge.failed::before {
+          background: #f87171;
+        }
+
+        @keyframes badge-pulse {
+          0% { transform: scale(0.85); opacity: 0.5; }
+          50% { transform: scale(1.3); opacity: 1; }
+          100% { transform: scale(0.85); opacity: 0.5; }
+        }
 
         .project-goal {
-          color: #cbd5e1;
-          font-size: 0.875rem;
-          margin-bottom: 1.5rem;
+          color: #94a3b8;
+          font-size: 0.9rem;
+          margin-bottom: 1.75rem;
+          line-height: 1.5;
           flex: 1;
           display: -webkit-box;
           -webkit-line-clamp: 3;
@@ -614,48 +688,61 @@ export default function ProjectsPage() {
           display: flex;
           align-items: center;
           gap: 1rem;
+          margin-top: auto;
         }
 
         .progress-bar-container {
           flex: 1;
           height: 6px;
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.05);
           border-radius: 999px;
           overflow: hidden;
         }
 
-        .progress-bar {
-          height: 100%;
-          background: var(--primary);
-          transition: width 0.3s ease;
-        }
-
         .progress-text {
           font-size: 0.75rem;
-          font-weight: 600;
+          font-weight: 700;
           color: #94a3b8;
+          min-width: 32px;
+          text-align: right;
+        }
+
+        /* Modal pop animation */
+        @keyframes modalPop {
+          from { opacity: 0; transform: scale(0.95) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         .modal-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.6);
-          backdrop-filter: blur(4px);
+          background: rgba(4, 4, 8, 0.6);
+          backdrop-filter: blur(12px) saturate(180%);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 100;
-          padding: 1rem;
+          padding: 1.5rem;
         }
 
         .modal-content {
           width: 100%;
-          max-width: 500px;
-          padding: 2rem;
+          max-width: 520px;
+          padding: 2.5rem;
+          animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+          background: rgba(15, 23, 42, 0.55);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
         }
 
         .modal-content h2 {
+          font-size: 1.75rem;
+          font-weight: 800;
           margin-bottom: 1.5rem;
+          letter-spacing: -0.02em;
+          background: linear-gradient(to right, #ffffff, #c084fc);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
 
         .modal-actions {
@@ -668,17 +755,22 @@ export default function ProjectsPage() {
         /* PROJECT DETAILED CONSOLE DESIGN */
         .console-modal {
           width: 100%;
-          max-width: 1100px;
-          height: 90vh;
+          max-width: 1200px;
+          height: 85vh;
           display: flex;
           flex-direction: column;
           overflow: hidden;
           padding: 0;
+          animation: modalPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+          background: rgba(15, 23, 42, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
         }
 
         .console-header {
-          padding: 1.5rem 2rem;
+          padding: 1.75rem 2.25rem;
           border-bottom: 1px solid var(--surface-border);
+          background: rgba(15, 23, 42, 0.2);
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -691,65 +783,81 @@ export default function ProjectsPage() {
         }
 
         .console-title-row h2 {
-          font-size: 1.5rem;
-          font-weight: 700;
+          font-size: 1.6rem;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          color: white;
         }
 
         .console-subtitle {
-          font-size: 0.75rem;
+          font-size: 0.8rem;
           color: #64748b;
           margin-top: 0.25rem;
         }
 
         .console-close-btn {
-          color: #94a3b8;
+          color: #64748b;
           font-size: 1.5rem;
-          transition: color 0.2s;
+          transition: all 0.2s ease;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .console-close-btn:hover {
           color: var(--foreground);
+          background: rgba(255, 255, 255, 0.08);
+          transform: rotate(90deg);
         }
 
         .console-layout {
           display: grid;
-          grid-template-columns: 320px 1fr;
+          grid-template-columns: 340px 1fr;
           flex: 1;
           overflow: hidden;
         }
 
         .console-sidebar {
-          padding: 1.5rem;
+          padding: 2rem 1.5rem;
           border-right: 1px solid var(--surface-border);
+          background: rgba(15, 23, 42, 0.15);
           overflow-y: auto;
           display: flex;
           flex-direction: column;
-          gap: 1.5rem;
+          gap: 1.75rem;
         }
 
         .console-section {
-          padding: 1.25rem;
+          padding: 1.5rem;
+          background: rgba(15, 23, 42, 0.25);
         }
 
         .console-section h3 {
-          font-size: 0.9375rem;
-          font-weight: 600;
-          margin-bottom: 0.75rem;
-          color: var(--foreground);
+          font-size: 0.95rem;
+          font-weight: 700;
+          margin-bottom: 1rem;
+          color: #f1f5f9;
+          letter-spacing: 0.03em;
+          text-transform: uppercase;
         }
 
         .goal-text {
-          font-size: 0.8125rem;
-          color: #cbd5e1;
-          line-height: 1.5;
-          margin-bottom: 1rem;
+          font-size: 0.85rem;
+          color: #94a3b8;
+          line-height: 1.6;
+          margin-bottom: 1.25rem;
         }
 
         .meta-tag {
           display: flex;
           justify-content: space-between;
-          font-size: 0.75rem;
-          padding: 0.35rem 0;
+          font-size: 0.8rem;
+          padding: 0.5rem 0;
           border-bottom: 1px solid rgba(255, 255, 255, 0.03);
         }
 
@@ -758,15 +866,15 @@ export default function ProjectsPage() {
         }
 
         .meta-value {
-          color: var(--foreground);
-          font-weight: 500;
+          color: #e2e8f0;
+          font-weight: 600;
         }
 
         .section-header-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.75rem;
         }
 
         .section-header-row h3 {
@@ -776,68 +884,91 @@ export default function ProjectsPage() {
         .file-upload-label {
           cursor: pointer;
           color: var(--primary);
-          transition: opacity 0.2s;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(99, 102, 241, 0.1);
+          border: 1px solid rgba(99, 102, 241, 0.15);
+          transition: all 0.2s ease;
         }
 
         .file-upload-label:hover {
-          opacity: 0.8;
+          background: rgba(99, 102, 241, 0.2);
+          transform: scale(1.05);
         }
 
         .section-desc {
           font-size: 0.75rem;
           color: #64748b;
-          margin-bottom: 1rem;
+          margin-bottom: 1.25rem;
         }
 
         .uploads-list {
           display: flex;
           flex-direction: column;
-          gap: 0.75rem;
+          gap: 0.85rem;
         }
 
         .empty-uploads {
-          font-size: 0.75rem;
+          font-size: 0.8rem;
           color: #64748b;
           text-align: center;
-          padding: 1rem 0;
+          padding: 1.5rem 0;
         }
 
         .upload-item {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
-          padding: 0.65rem;
-          background: rgba(0, 0, 0, 0.15);
-          border-radius: 8px;
+          gap: 0.85rem;
+          padding: 0.8rem 1rem;
+          background: rgba(15, 23, 42, 0.45);
+          border-radius: 10px;
           border: 1px solid rgba(255, 255, 255, 0.03);
+          transition: all 0.2s ease;
+        }
+
+        .upload-item:hover {
+          border-color: rgba(255, 255, 255, 0.08);
+          background: rgba(15, 23, 42, 0.6);
         }
 
         .file-icon {
           color: var(--primary);
+          flex-shrink: 0;
         }
 
         .upload-details {
           display: flex;
           flex-direction: column;
           min-width: 0;
+          flex: 1;
         }
 
         .filename {
-          font-size: 0.75rem;
-          font-weight: 500;
+          font-size: 0.8rem;
+          font-weight: 600;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+          color: #f1f5f9;
         }
 
         .filesize {
-          font-size: 0.6875rem;
+          font-size: 0.72rem;
           color: #64748b;
+          margin-top: 0.15rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
 
         .file-status {
           text-transform: capitalize;
-          font-weight: 600;
+          font-weight: 700;
+          font-size: 0.7rem;
         }
 
         .file-status.completed { color: var(--success); }
@@ -845,28 +976,39 @@ export default function ProjectsPage() {
         .file-status.processing { color: #38bdf8; }
 
         .console-main {
-          padding: 1.5rem 2rem;
+          padding: 2rem 2.25rem;
           overflow-y: auto;
           display: flex;
           flex-direction: column;
-          gap: 1.5rem;
+          gap: 2rem;
+          background: transparent;
           border-radius: 0;
           border: none;
         }
 
         .progress-section {
-          padding: 1.25rem;
-          background: rgba(0, 0, 0, 0.2);
-          border-radius: 12px;
-          border: 1px solid rgba(255,255,255,0.03);
+          padding: 1.5rem;
+          background: rgba(15, 23, 42, 0.35);
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.04);
         }
 
         .progress-meta {
           display: flex;
           justify-content: space-between;
-          font-size: 0.875rem;
-          font-weight: 600;
-          margin-bottom: 0.5rem;
+          align-items: center;
+          font-size: 0.9rem;
+          font-weight: 700;
+          margin-bottom: 0.85rem;
+        }
+
+        .progress-meta h3 {
+          font-size: 1rem;
+          color: white;
+        }
+
+        .progress-meta span {
+          color: var(--accent);
         }
 
         .console-progress-bar-container {
@@ -876,20 +1018,21 @@ export default function ProjectsPage() {
           overflow: hidden;
         }
 
-        .console-progress-bar {
-          height: 100%;
-          background: linear-gradient(to right, var(--primary), var(--accent));
-          transition: width 0.4s ease;
-        }
-
         .report-ready-banner {
           display: flex;
           align-items: center;
-          gap: 1rem;
-          padding: 1.25rem;
-          background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-          border: 1px solid rgba(139, 92, 246, 0.3);
-          border-radius: 12px;
+          gap: 1.25rem;
+          padding: 1.5rem;
+          background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(217, 70, 239, 0.08) 100%);
+          border: 1px solid rgba(217, 70, 239, 0.25);
+          border-radius: 14px;
+          box-shadow: 0 4px 20px rgba(217, 70, 239, 0.08);
+          animation: pulse-glow 2.5s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+          0% { border-color: rgba(217, 70, 239, 0.2); box-shadow: 0 4px 15px rgba(217, 70, 239, 0.05); }
+          100% { border-color: rgba(217, 70, 239, 0.35); box-shadow: 0 4px 25px rgba(217, 70, 239, 0.12); }
         }
 
         .banner-text {
@@ -897,32 +1040,33 @@ export default function ProjectsPage() {
         }
 
         .banner-text h4 {
-          font-size: 0.9375rem;
-          font-weight: 700;
-          color: var(--foreground);
+          font-size: 1rem;
+          font-weight: 750;
+          color: white;
         }
 
         .banner-text p {
-          font-size: 0.75rem;
+          font-size: 0.8rem;
           color: #cbd5e1;
-          margin-top: 0.15rem;
+          margin-top: 0.2rem;
         }
 
         .banner-downloads {
           display: flex;
-          gap: 0.5rem;
+          gap: 0.6rem;
         }
 
         .banner-downloads .btn {
-          font-size: 0.8125rem;
-          padding: 0.5rem 1rem;
+          font-size: 0.8rem;
+          padding: 0.5rem 1.1rem;
           width: auto;
+          border-radius: 8px;
         }
 
         .tasks-timeline {
           display: flex;
           flex-direction: column;
-          gap: 1rem;
+          gap: 1.25rem;
         }
 
         .empty-tasks {
@@ -932,43 +1076,49 @@ export default function ProjectsPage() {
           justify-content: center;
           padding: 4rem 0;
           color: #64748b;
-          gap: 0.5rem;
+          gap: 0.75rem;
         }
 
         .task-node {
-          border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          background: rgba(15, 17, 21, 0.4);
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.04);
+          background: rgba(15, 23, 42, 0.3);
           overflow: hidden;
-          transition: border-color 0.25s;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .task-node.completed {
           border-left: 4px solid var(--success);
+          background: rgba(16, 185, 129, 0.01);
         }
 
         .task-node.running {
           border-left: 4px solid #38bdf8;
           border-color: rgba(56, 189, 248, 0.3);
-          box-shadow: 0 0 12px 0 rgba(56, 189, 248, 0.05);
+          box-shadow: 0 4px 20px rgba(56, 189, 248, 0.08);
           background: rgba(56, 189, 248, 0.02);
         }
 
         .task-node.failed {
           border-left: 4px solid var(--error);
+          background: rgba(239, 68, 68, 0.01);
         }
 
         .task-node.pending {
           border-left: 4px solid #475569;
-          opacity: 0.6;
+          opacity: 0.65;
         }
 
         .task-node-header {
           display: flex;
           align-items: center;
-          padding: 1rem 1.25rem;
+          padding: 1.25rem 1.5rem;
           cursor: pointer;
-          gap: 1rem;
+          gap: 1.25rem;
+        }
+
+        .task-node-header:hover {
+          background: rgba(255, 255, 255, 0.01);
         }
 
         .task-info {
@@ -976,68 +1126,76 @@ export default function ProjectsPage() {
         }
 
         .task-info h4 {
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: var(--foreground);
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: white;
         }
 
         .task-meta {
           display: flex;
           align-items: center;
-          gap: 1rem;
-          margin-top: 0.25rem;
+          gap: 1.25rem;
+          margin-top: 0.3rem;
         }
 
         .agent-badge {
           display: inline-flex;
           align-items: center;
-          gap: 0.35rem;
-          font-size: 0.6875rem;
+          gap: 0.4rem;
+          font-size: 0.72rem;
           color: #94a3b8;
-          font-weight: 500;
+          font-weight: 600;
         }
 
         .duration-tag {
           display: inline-flex;
           align-items: center;
-          gap: 0.25rem;
-          font-size: 0.6875rem;
+          gap: 0.3rem;
+          font-size: 0.72rem;
           color: #64748b;
         }
 
         .expand-btn {
           color: #64748b;
+          transition: transform 0.2s ease;
+        }
+
+        .task-node-header:hover .expand-btn {
+          color: var(--foreground);
         }
 
         .status-ico {
           flex-shrink: 0;
         }
 
-        .success-ico { color: var(--success); }
-        .error-ico { color: var(--error); }
+        .success-ico { color: var(--success); filter: drop-shadow(0 0 4px var(--success)); }
+        .error-ico { color: var(--error); filter: drop-shadow(0 0 4px var(--error)); }
         .pending-ico { color: #475569; }
         .spinner-ico {
           color: #38bdf8;
           animation: spin 1.2s linear infinite;
+          filter: drop-shadow(0 0 4px #38bdf8);
         }
 
         .task-node-body {
-          padding: 0 1.25rem 1.25rem 3.25rem;
+          padding: 0 1.5rem 1.5rem 3.75rem;
           border-top: 1px solid rgba(255, 255, 255, 0.02);
-          background: rgba(0, 0, 0, 0.25);
+          background: rgba(0, 0, 0, 0.15);
         }
 
         .json-viewer {
-          font-family: "Courier New", Courier, monospace;
-          font-size: 0.75rem;
-          color: #38bdf8;
+          font-family: "Fira Code", "Courier New", Courier, monospace;
+          font-size: 0.8rem;
+          color: #a5b4fc;
           overflow-x: auto;
           white-space: pre-wrap;
-          padding: 1rem;
-          background: rgba(0,0,0,0.4);
-          border-radius: 8px;
-          max-height: 250px;
+          padding: 1.25rem;
+          background: rgba(8, 7, 16, 0.6);
+          border: 1px solid rgba(255,255,255,0.03);
+          border-radius: 10px;
+          max-height: 300px;
           overflow-y: auto;
+          box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
         }
 
         @keyframes spin {

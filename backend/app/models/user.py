@@ -20,7 +20,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20), default="user")  # user, admin
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    ai_credits: Mapped[int] = mapped_column(Integer, default=100)
+    ai_credits: Mapped[int] = mapped_column(Integer, default=450)
     plan: Mapped[str] = mapped_column(String(20), default="free")  # free, pro, enterprise
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(

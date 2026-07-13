@@ -25,42 +25,21 @@ export default function ReportsPage() {
   const handleDownload = async (path: string, title: string, format: string) => {
     if (!path) return;
     try {
-      // Strip leading '/api' to avoid duplicate /api segment when concatenated with Axios baseURL
-      const cleanPath = path.startsWith("/api") ? path.slice(4) : path;
-      const res = await api.get(cleanPath, {
-        responseType: "blob",
-      });
+      const token = localStorage.getItem("token") || "";
+      const baseURL = api.defaults.baseURL || "http://localhost:8000/api";
+      const apiHost = baseURL.endsWith("/api") ? baseURL.slice(0, -4) : baseURL;
+      const url = `${apiHost}${path}?token=${token}`;
       
-      const blob = new Blob([res.data], { type: res.headers["content-type"] });
-      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      
-      // Determine file name from content-disposition header if present
-      let filename = `${title.replace(/\s+/g, "_")}_Intelligence_Report.${format}`;
-      const disposition = res.headers["content-disposition"];
-      if (disposition && disposition.includes("filename=")) {
-        const matches = disposition.match(/filename="?([^"]+)"?/);
-        if (matches && matches[1]) {
-          filename = matches[1];
-        }
-      }
-      
-      link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
       
-      // Delay removal and revocation to let the browser process the download with the correct filename
       setTimeout(() => {
         document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
       }, 200);
     } catch (err) {
       console.error("Failed to download report:", err);
-      // Fallback
-      const token = localStorage.getItem("token") || "";
-      const url = `http://localhost:8000${path}?token=${token}`;
-      window.open(url, "_blank");
     }
   };
 
