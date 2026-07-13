@@ -36,8 +36,6 @@ services:
     env: docker
     dockerfilePath: frontend/Dockerfile
     plan: free
-    dockerBuildArgs:
-      NEXT_PUBLIC_API_URL: ${agentforge-backend.url}/api
     envVars:
       - key: NEXT_PUBLIC_API_URL
         value: ${agentforge-backend.url}/api
